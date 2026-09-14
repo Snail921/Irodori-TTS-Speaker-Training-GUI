@@ -31,7 +31,7 @@ WHISPER_CLIENT = ROOT / "speaker_training_transcribe_client.py"
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac", ".wma"}
 REVIEW_HEADERS = ["audio", "text", "approved", "asr_status", "notes"]
 APPROVED_METADATA_NAME = "approved_metadata.jsonl"
-UI_VERSION = "review-table-v2.6 / 2026-09-14"
+UI_VERSION = "review-table-v2.7 / 2026-09-14"
 
 REVIEW_AUDIO_REPLAY_JS = r"""
 () => {
@@ -819,9 +819,9 @@ def build_ui() -> gr.Blocks:
                 with gr.Accordion("Speaker Inversion 学習設定", open=True):
                     checkpoint = gr.Textbox(label="V4/V4.1-Small Base Model", value=_default_checkpoint())
                     with gr.Row():
-                        precision = gr.Dropdown(label="Precision", choices=["bf16", "fp32"], value="bf16")
-                        batch_size = gr.Number(label="Batch Size", value=2, precision=0)
-                        grad_accum = gr.Number(label="Gradient Accumulation", value=8, precision=0)
+                        precision = gr.Dropdown(label="Precision", choices=["bf16", "fp32"], value="fp32")
+                        batch_size = gr.Number(label="Batch Size", value=16, precision=0)
+                        grad_accum = gr.Number(label="Gradient Accumulation", value=1, precision=0)
                         num_workers = gr.Number(
                             label="DataLoader Workers（Windowsは0）",
                             value=0,

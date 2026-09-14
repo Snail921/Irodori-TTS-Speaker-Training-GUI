@@ -64,7 +64,7 @@ echo  GUI: http://127.0.0.1:7862
 echo  Whisper: %MIRAI_WHISPER_URL%
 echo  Irodori repository: %IRODORI_TTS_ROOT%
 echo  GUI data: %GUI_ROOT%
-echo  UI Version: review-table-v2.6 / 2026-09-14
+echo  UI Version: review-table-v2.7 / 2026-09-14
 echo  Long jobs run in the background and can be stopped in the GUI.
 echo ============================================================
 start "" /b powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%GUI_ROOT%open_when_ready.ps1" -Url "http://127.0.0.1:7862"
