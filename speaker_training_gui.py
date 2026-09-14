@@ -31,7 +31,7 @@ WHISPER_CLIENT = ROOT / "speaker_training_transcribe_client.py"
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac", ".wma"}
 REVIEW_HEADERS = ["audio", "text", "approved", "asr_status", "notes"]
 APPROVED_METADATA_NAME = "approved_metadata.jsonl"
-UI_VERSION = "review-table-v2.5 / 2026-09-14"
+UI_VERSION = "review-table-v2.6 / 2026-09-14"
 
 REVIEW_AUDIO_REPLAY_JS = r"""
 () => {
@@ -47,20 +47,30 @@ REVIEW_AUDIO_REPLAY_JS = r"""
         const audioColumn = headers.findIndex(
             (header) => header.textContent.trim().toLowerCase() === "audio"
         );
-        if (audioColumn < 0 || cell.cellIndex !== audioColumn) return;
+        if (audioColumn < 0) return;
 
-        const relativePath = cell.textContent.trim();
-        const statusField = document.querySelector(
-            "#speaker-review-selected-clip input, #speaker-review-selected-clip textarea"
-        );
-        const selectedStatus = statusField?.value || "";
-        if (!relativePath || !selectedStatus.endsWith(relativePath)) return;
+        const rowCells = Array.from(cell.parentElement?.cells || []);
+        const audioCell = rowCells[audioColumn];
+        const relativePath = audioCell?.textContent.trim() || "";
+        if (!relativePath) return;
 
-        const player = document.querySelector("#speaker-review-audio audio");
-        if (!player || !player.src) return;
-        player.currentTime = 0;
-        const playResult = player.play();
-        if (playResult?.catch) playResult.catch(() => {});
+        let attempts = 0;
+        const playWhenReady = () => {
+            attempts += 1;
+            const statusField = document.querySelector(
+                "#speaker-review-selected-clip input, #speaker-review-selected-clip textarea"
+            );
+            const player = document.querySelector("#speaker-review-audio audio");
+            const selectedStatus = statusField?.value || "";
+            if (selectedStatus.endsWith(relativePath) && player?.src) {
+                player.currentTime = 0;
+                const playResult = player.play();
+                if (playResult?.catch) playResult.catch(() => {});
+                return;
+            }
+            if (attempts < 50) window.setTimeout(playWhenReady, 100);
+        };
+        window.setTimeout(playWhenReady, 0);
     }, true);
 }
 """
@@ -931,6 +941,7 @@ def main() -> None:
         server_port=args.server_port,
         share=bool(args.share),
         js=REVIEW_AUDIO_REPLAY_JS,
+        allowed_paths=[str(SPEAKER_ROOT.resolve())],
     )
 
 
