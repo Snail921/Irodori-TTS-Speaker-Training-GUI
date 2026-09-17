@@ -6,6 +6,7 @@ import csv
 import ctypes
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -31,7 +32,7 @@ WHISPER_CLIENT = ROOT / "speaker_training_transcribe_client.py"
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac", ".wma"}
 REVIEW_HEADERS = ["audio", "text", "approved", "asr_status", "notes"]
 APPROVED_METADATA_NAME = "approved_metadata.jsonl"
-UI_VERSION = "review-table-v2.7 / 2026-09-14"
+UI_VERSION = "checkpoint-test-v2.8 / 2026-09-18"
 
 REVIEW_AUDIO_REPLAY_JS = r"""
 () => {
@@ -396,6 +397,127 @@ def _default_checkpoint() -> str:
     return str(candidates[-1]) if candidates else ""
 
 
+def _embedding_choices(speaker: str | None) -> list[str]:
+    try:
+        speaker_dir = _speaker_dir(speaker)
+    except Exception:
+        return []
+    root = EMBEDDING_ROOT / speaker_dir.name
+    if not root.is_dir():
+        return []
+
+    def sort_key(path: Path) -> tuple[int, int, int, str]:
+        match = re.search(r"checkpoint_(\d+)", path.name, re.IGNORECASE)
+        step = int(match.group(1)) if match else -1
+        is_final = 1 if "final" in path.name.casefold() else 0
+        return (path.parent.stat().st_mtime_ns, is_final, step, path.as_posix().casefold())
+
+    paths = sorted(root.rglob("*.speaker.safetensors"), key=sort_key, reverse=True)
+    return [path.resolve().relative_to(root.resolve()).as_posix() for path in paths]
+
+
+def _resolve_embedding(speaker: str | None, selection: str | None) -> Path:
+    speaker_dir = _speaker_dir(speaker)
+    root = (EMBEDDING_ROOT / speaker_dir.name).resolve()
+    selected = str(selection or "").strip()
+    if not selected:
+        raise gr.Error("テストするSpeaker Embeddingを選択してください。")
+    candidate = (root / selected).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise gr.Error("Speaker Embeddingの指定が話者フォルダー外です。") from exc
+    if not candidate.is_file() or not candidate.name.endswith(".speaker.safetensors"):
+        raise gr.Error(f"Speaker Embeddingが見つかりません: {candidate}")
+    return candidate
+
+
+def _refresh_test_embeddings(speaker: str | None, current: str | None = None):
+    choices = _embedding_choices(speaker)
+    value = current if current in choices else (choices[0] if choices else None)
+    if choices:
+        message = f"{len(choices)}個のSpeaker Embeddingを検出しました。"
+    else:
+        message = "Speaker Embeddingがありません。先に学習を完了してください。"
+    return gr.update(choices=choices, value=value), message
+
+
+def _start_test(
+    speaker: str | None,
+    embedding_selection: str | None,
+    checkpoint: str,
+    text: str,
+    caption: str,
+    precision: str,
+    num_steps: int,
+    seed: int,
+) -> tuple[str, str, str]:
+    speaker_dir = _speaker_dir(speaker)
+    embedding = _resolve_embedding(speaker, embedding_selection)
+    infer_script = IRODORI_ROOT / "infer.py"
+    if not infer_script.is_file():
+        raise gr.Error(f"Irodori-TTSのinfer.pyが見つかりません: {infer_script}")
+    checkpoint_path = Path(str(checkpoint).strip()).expanduser().resolve()
+    if not checkpoint_path.is_file():
+        raise gr.Error(f"ベースモデルがありません: {checkpoint_path}")
+    reading_text = str(text).strip()
+    if not reading_text:
+        raise gr.Error("読み上げテキストを入力してください。")
+    if str(precision) not in {"fp32", "bf16"}:
+        raise gr.Error("Precisionはfp32またはbf16を指定してください。")
+    if int(num_steps) <= 0:
+        raise gr.Error("Num Stepsは1以上を指定してください。")
+
+    output_dir = embedding.parent / "tests"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    embedding_name = embedding.name.removesuffix(".speaker.safetensors")
+    output_path = output_dir / (
+        f"{embedding_name}_{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}.wav"
+    )
+    command = [
+        str(GUI_PYTHON),
+        str(infer_script),
+        "--checkpoint",
+        str(checkpoint_path),
+        "--ref-embed",
+        str(embedding),
+        "--text",
+        reading_text,
+        "--output-wav",
+        str(output_path),
+        "--model-device",
+        "cuda",
+        "--codec-device",
+        "cuda",
+        "--model-precision",
+        str(precision),
+        "--codec-precision",
+        str(precision),
+        "--num-steps",
+        str(int(num_steps)),
+        "--seed",
+        str(int(seed)),
+    ]
+    if str(caption).strip():
+        command += ["--caption", str(caption).strip()]
+    message = _launch_job(speaker_dir.name, "test", command)
+    return message, "", str(output_path)
+
+
+def _load_test_audio(output_path: str | None) -> tuple[str, str]:
+    raw = str(output_path or "").strip()
+    if not raw:
+        raise gr.Error("先にテスト音声を生成してください。")
+    path = Path(raw).expanduser().resolve()
+    try:
+        path.relative_to(EMBEDDING_ROOT.resolve())
+    except ValueError as exc:
+        raise gr.Error("テスト音声のパスが出力フォルダー外です。") from exc
+    if not path.is_file():
+        raise gr.Error("音声はまだ生成されていません。ジョブ完了後にもう一度押してください。")
+    return str(path), f"生成音声を読み込みました: {path.name}"
+
+
 def _pid_exists(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -727,10 +849,12 @@ def _training_readiness(speaker: str | None) -> str:
 def build_ui() -> gr.Blocks:
     speakers = _speaker_names()
     initial = speakers[0] if speakers else None
+    initial_embeddings = _embedding_choices(initial)
+    initial_embedding = initial_embeddings[0] if initial_embeddings else None
     with gr.Blocks(title="Irodori Speaker Training") as demo:
         gr.Markdown(
             "# Irodori Speaker Training\n"
-            "文字起こし → 音声付きレビュー → manifest作成・Speaker Inversion学習を順番に行います。\n\n"
+            "文字起こし → 音声付きレビュー → manifest作成・Speaker Inversion学習 → チェックポイント比較を行います。\n\n"
             f"UI Version: `{UI_VERSION}`"
         )
         with gr.Row():
@@ -819,7 +943,7 @@ def build_ui() -> gr.Blocks:
                 with gr.Accordion("Speaker Inversion 学習設定", open=True):
                     checkpoint = gr.Textbox(label="V4/V4.1-Small Base Model", value=_default_checkpoint())
                     with gr.Row():
-                        precision = gr.Dropdown(label="Precision", choices=["bf16", "fp32"], value="fp32")
+                        precision = gr.Dropdown(label="Precision", choices=["fp32", "bf16"], value="fp32")
                         batch_size = gr.Number(label="Batch Size", value=16, precision=0)
                         grad_accum = gr.Number(label="Gradient Accumulation", value=1, precision=0)
                         num_workers = gr.Number(
@@ -838,8 +962,76 @@ def build_ui() -> gr.Blocks:
                 train_status = gr.Textbox(label="学習ジョブ状態", interactive=False)
                 train_log = gr.Textbox(label="学習ログ", lines=18, interactive=False)
 
+            with gr.Tab("4. テスト"):
+                gr.Markdown(
+                    "学習で保存されたステップ別のSpeaker Embeddingを使って音声を生成し、聴き比べます。"
+                    "比較時はテキスト・Seed・Num Steps・Precisionを同じ値にしてください。"
+                    "テスト推論もGPUを使用するため、学習中や別のIrodori-TTS推論処理との同時実行は避けてください。"
+                )
+                with gr.Row():
+                    test_embedding = gr.Dropdown(
+                        label="テストするSpeaker Embedding",
+                        choices=initial_embeddings,
+                        value=initial_embedding,
+                        scale=4,
+                    )
+                    refresh_test_embeddings = gr.Button("保存済みモデルを更新", scale=1)
+                test_embedding_status = gr.Textbox(
+                    label="検出状況",
+                    value=(
+                        f"{len(initial_embeddings)}個のSpeaker Embeddingを検出しました。"
+                        if initial_embeddings
+                        else "Speaker Embeddingがありません。先に学習を完了してください。"
+                    ),
+                    interactive=False,
+                )
+                test_checkpoint = gr.Textbox(
+                    label="V4/V4.1-Small Base Model",
+                    value=_default_checkpoint(),
+                )
+                test_text = gr.Textbox(
+                    label="読み上げテキスト",
+                    value="こんにちは。これは学習した話者の音声を確認するためのテストです。",
+                    lines=3,
+                )
+                test_caption = gr.Textbox(
+                    label="Caption / 話し方の指示（任意）",
+                    placeholder="例: 落ち着いた自然な声で、やわらかく話す。",
+                    lines=2,
+                )
+                with gr.Row():
+                    test_precision = gr.Dropdown(
+                        label="Precision",
+                        choices=["fp32", "bf16"],
+                        value="fp32",
+                    )
+                    test_num_steps = gr.Number(label="Num Steps", value=40, precision=0, minimum=1)
+                    test_seed = gr.Number(
+                        label="Seed（比較時は固定）",
+                        value=1234,
+                        precision=0,
+                    )
+                with gr.Row():
+                    start_test = gr.Button("テスト音声を生成", variant="primary")
+                    stop_test = gr.Button("テストを停止", variant="stop")
+                    load_test_audio = gr.Button("生成音声をプレイヤーへ読み込む")
+                test_output = gr.Textbox(label="今回の音声出力先", interactive=False)
+                test_status = gr.Textbox(label="テストジョブ状態", interactive=False)
+                test_log = gr.Textbox(label="テストログ", lines=14, interactive=False)
+                test_audio_status = gr.Textbox(label="音声の読み込み結果", interactive=False)
+                test_audio = gr.Audio(
+                    label="生成音声",
+                    type="filepath",
+                    interactive=False,
+                )
+
         refresh_speakers.click(_refresh_speakers, inputs=[speaker], outputs=[speaker, speaker_status])
         speaker.change(_speaker_status, inputs=[speaker], outputs=[speaker_status])
+        speaker.change(
+            _refresh_test_embeddings,
+            inputs=[speaker, test_embedding],
+            outputs=[test_embedding, test_embedding_status],
+        )
 
         start_transcribe.click(
             _start_transcription,
@@ -905,6 +1097,36 @@ def build_ui() -> gr.Blocks:
             outputs=[train_status, train_log],
         )
 
+        refresh_test_embeddings.click(
+            _refresh_test_embeddings,
+            inputs=[speaker, test_embedding],
+            outputs=[test_embedding, test_embedding_status],
+        )
+        start_test.click(
+            _start_test,
+            inputs=[
+                speaker,
+                test_embedding,
+                test_checkpoint,
+                test_text,
+                test_caption,
+                test_precision,
+                test_num_steps,
+                test_seed,
+            ],
+            outputs=[test_status, test_log, test_output],
+        )
+        stop_test.click(
+            lambda value: _stop_job(value, "test"),
+            inputs=[speaker],
+            outputs=[test_status, test_log],
+        )
+        load_test_audio.click(
+            _load_test_audio,
+            inputs=[test_output],
+            outputs=[test_audio, test_audio_status],
+        )
+
         timer = gr.Timer(value=2.0, active=True)
         timer.tick(
             lambda value: _job_view(value, "transcribe"),
@@ -924,6 +1146,12 @@ def build_ui() -> gr.Blocks:
             outputs=[train_status, train_log],
             show_progress="hidden",
         )
+        timer.tick(
+            lambda value: _job_view(value, "test"),
+            inputs=[speaker],
+            outputs=[test_status, test_log],
+            show_progress="hidden",
+        )
 
     return demo
 
@@ -941,7 +1169,7 @@ def main() -> None:
         server_port=args.server_port,
         share=bool(args.share),
         js=REVIEW_AUDIO_REPLAY_JS,
-        allowed_paths=[str(SPEAKER_ROOT.resolve())],
+        allowed_paths=[str(SPEAKER_ROOT.resolve()), str(EMBEDDING_ROOT.resolve())],
     )
 
 

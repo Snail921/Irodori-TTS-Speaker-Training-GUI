@@ -2,7 +2,7 @@
 
 [Irodori-TTS](https://github.com/Aratako/Irodori-TTS) v4/v4.1向けのSpeaker Inversion学習GUIです。
 
-文字起こし、音声を聴きながらの確認・修正、承認データからのmanifest生成、Speaker Embedding学習までを1つのGradio画面から操作できます。Whisper処理には[MiRai-Server-for-Whisper](https://github.com/Snail921/MiRai-Server-for-Whisper)のHTTP APIを使用し、学習には公式Irodori-TTSクローンのuv環境と学習コードをそのまま利用します。
+文字起こし、音声を聴きながらの確認・修正、承認データからのmanifest生成、Speaker Embedding学習、ステップ別チェックポイントのテストまでを1つのGradio画面から操作できます。Whisper処理には[MiRai-Server-for-Whisper](https://github.com/Snail921/MiRai-Server-for-Whisper)のHTTP APIを使用し、学習とテストには公式Irodori-TTSクローンのuv環境とコードをそのまま利用します。
 
 ## Manuals / マニュアル
 
@@ -17,6 +17,7 @@
 - 表内での文字起こし修正・承認管理
 - 承認済みデータだけを使ったmanifest・latent生成
 - Speaker Inversion学習、ログ表示、停止操作
+- 保存されたステップ別Speaker Embeddingによるテスト音声生成・再生
 - 公式Irodori-TTSリポジトリとuv環境の自動検出
 - ドライブ文字やPython実行ファイルへの固定パスなし
 

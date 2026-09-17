@@ -152,6 +152,20 @@ speaker-embeddings\Speaker name\YYYYMMDD-HHMMSS\
 
 Use `checkpoint_final.speaker.safetensors` with its corresponding base model through Irodori-TTS `--ref-embed`.
 
+### 6.5 Testing step checkpoints
+
+Tab **4. Test** synthesizes speech with each saved `*.speaker.safetensors` so you can compare checkpoints by listening.
+
+1. Select a speaker and refresh the saved models.
+2. Select a Speaker Embedding and the matching V4/V4.1-Small base model used for training.
+3. Enter any text and, optionally, a style caption.
+4. Start test synthesis and wait for `completed` with exit code `0`.
+5. Load the generated audio into the player and listen.
+
+For a fair comparison, keep the text, caption, precision, number of steps, and seed unchanged; switch only the Speaker Embedding. The default seed is `1234`. Evaluate speaker similarity, pronunciation, accent, artifacts, consistency on longer sentences, and caption response. Test several different sentences rather than choosing from a single sample. The GUI deliberately does not assign an automatic quality score or ranking.
+
+Generated WAV files are saved in a `tests` directory beside the selected training checkpoint. Test inference also uses the GPU, so avoid running it at the same time as training or another Irodori-TTS inference process.
+
 ## 7. Environment variables
 
 Select the Irodori-TTS checkout manually:
@@ -199,6 +213,8 @@ speaker-training\Speaker name\
 └─ .jobs\
 
 speaker-embeddings\Speaker\Timestamp\
+├─ checkpoint_*.speaker.safetensors
+└─ tests\
 ```
 
 `speaker-training`, `speaker-embeddings`, and `models-cache` are excluded from Git.

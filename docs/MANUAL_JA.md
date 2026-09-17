@@ -152,6 +152,20 @@ speaker-embeddings\話者名\YYYYMMDD-HHMMSS\
 
 生成された`checkpoint_final.speaker.safetensors`は、対応するベースモデルとIrodori-TTSの`--ref-embed`で利用できます。
 
+### 6.5 ステップ別チェックポイントのテスト
+
+「4. テスト」では、学習中に保存された各`*.speaker.safetensors`を実際にTTSして聴き比べられます。
+
+1. 話者を選択し、「保存済みモデルを更新」を押します。
+2. テストするSpeaker Embeddingと、学習時に使用した系統のV4/V4.1-Smallベースモデルを指定します。
+3. 好きな読み上げテキストを入力します。必要に応じてCaptionへ話し方を指定します。
+4. 「テスト音声を生成」を押し、状態が`completed`、終了コードが`0`になるまで待ちます。
+5. 「生成音声をプレイヤーへ読み込む」を押して再生します。
+
+公平に比較するには、テキスト、Caption、Precision、Num Steps、Seedを固定し、Speaker Embeddingだけを切り替えてください。Seedの既定値は`1234`です。話者らしさ、発音、アクセント、ノイズ、長い文での安定性、Captionへの反応を確認します。一つの文だけで決めず、複数の文で比較することを推奨します。GUIは音質の自動採点や順位付けを行いません。
+
+生成WAVは、選択したチェックポイントと同じ学習実行フォルダー内の`tests`へ保存されます。テスト推論もGPUを使用するため、学習や別のIrodori-TTS推論処理との同時実行は避けてください。
+
 ## 7. 環境変数
 
 自動検出できないIrodori-TTSを指定：
@@ -199,6 +213,8 @@ speaker-training\話者名\
 └─ .jobs\
 
 speaker-embeddings\話者名\日時\
+├─ checkpoint_*.speaker.safetensors
+└─ tests\
 ```
 
 `speaker-training`、`speaker-embeddings`、`models-cache`はGit管理対象外です。
