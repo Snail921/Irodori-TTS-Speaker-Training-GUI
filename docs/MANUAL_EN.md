@@ -159,8 +159,10 @@ Tab **4. Test** synthesizes speech with each saved `*.speaker.safetensors` so yo
 1. Select a speaker and refresh the saved models.
 2. Select a Speaker Embedding and the matching V4/V4.1-Small base model used for training.
 3. Enter any text and, optionally, a style caption.
-4. Start test synthesis and wait for `completed` with exit code `0`.
-5. Load the generated audio into the player and listen.
+4. Start test synthesis.
+5. When the job reaches `completed` with exit code `0`, the generated audio is loaded into the player and played automatically.
+
+If browser autoplay restrictions prevent playback, click **Reload generated audio**.
 
 For a fair comparison, keep the text, caption, precision, number of steps, and seed unchanged; switch only the Speaker Embedding. The default seed is `1234`. Evaluate speaker similarity, pronunciation, accent, artifacts, consistency on longer sentences, and caption response. Test several different sentences rather than choosing from a single sample. The GUI deliberately does not assign an automatic quality score or ranking.
 

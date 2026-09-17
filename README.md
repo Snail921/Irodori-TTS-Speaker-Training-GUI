@@ -17,7 +17,7 @@
 - 表内での文字起こし修正・承認管理
 - 承認済みデータだけを使ったmanifest・latent生成
 - Speaker Inversion学習、ログ表示、停止操作
-- 保存されたステップ別Speaker Embeddingによるテスト音声生成・再生
+- 保存されたステップ別Speaker Embeddingによるテスト音声生成・完了後の自動再生
 - 公式Irodori-TTSリポジトリとuv環境の自動検出
 - ドライブ文字やPython実行ファイルへの固定パスなし
 

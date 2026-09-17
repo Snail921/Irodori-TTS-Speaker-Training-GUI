@@ -32,7 +32,7 @@ WHISPER_CLIENT = ROOT / "speaker_training_transcribe_client.py"
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac", ".wma"}
 REVIEW_HEADERS = ["audio", "text", "approved", "asr_status", "notes"]
 APPROVED_METADATA_NAME = "approved_metadata.jsonl"
-UI_VERSION = "checkpoint-test-v2.8 / 2026-09-18"
+UI_VERSION = "checkpoint-autoplay-v2.9 / 2026-09-18"
 
 REVIEW_AUDIO_REPLAY_JS = r"""
 () => {
@@ -451,7 +451,7 @@ def _start_test(
     precision: str,
     num_steps: int,
     seed: int,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, None, str, str]:
     speaker_dir = _speaker_dir(speaker)
     embedding = _resolve_embedding(speaker, embedding_selection)
     infer_script = IRODORI_ROOT / "infer.py"
@@ -501,10 +501,10 @@ def _start_test(
     if str(caption).strip():
         command += ["--caption", str(caption).strip()]
     message = _launch_job(speaker_dir.name, "test", command)
-    return message, "", str(output_path)
+    return message, "", str(output_path), None, "生成中です。完了後に自動再生します。", ""
 
 
-def _load_test_audio(output_path: str | None) -> tuple[str, str]:
+def _load_test_audio(output_path: str | None) -> tuple[str, str, str]:
     raw = str(output_path or "").strip()
     if not raw:
         raise gr.Error("先にテスト音声を生成してください。")
@@ -515,7 +515,7 @@ def _load_test_audio(output_path: str | None) -> tuple[str, str]:
         raise gr.Error("テスト音声のパスが出力フォルダー外です。") from exc
     if not path.is_file():
         raise gr.Error("音声はまだ生成されていません。ジョブ完了後にもう一度押してください。")
-    return str(path), f"生成音声を読み込みました: {path.name}"
+    return str(path), f"生成音声を読み込みました: {path.name}", str(path)
 
 
 def _pid_exists(pid: int) -> bool:
@@ -641,6 +641,44 @@ def _job_view(speaker: str | None, kind: str) -> tuple[str, str]:
     if status.get("finished_at"):
         text += f" / 終了: {status['finished_at']}"
     return text, _tail(log_path)
+
+
+def _test_job_view(
+    speaker: str | None,
+    output_path: str | None,
+    loaded_output_path: str | None,
+):
+    status_text, log = _job_view(speaker, "test")
+    try:
+        status_path, _ = _job_files(str(speaker), "test")
+        status = _read_status(status_path)
+    except Exception:
+        return status_text, log, gr.update(), gr.update(), str(loaded_output_path or "")
+
+    raw = str(output_path or "").strip()
+    loaded = str(loaded_output_path or "").strip()
+    command = [str(item) for item in status.get("command", [])]
+    if (
+        raw
+        and raw != loaded
+        and status.get("state") == "completed"
+        and int(status.get("exit_code") or 0) == 0
+        and raw in command
+    ):
+        path = Path(raw).expanduser().resolve()
+        try:
+            path.relative_to(EMBEDDING_ROOT.resolve())
+        except ValueError:
+            return status_text, log, gr.update(), "出力先が許可フォルダー外です。", loaded
+        if path.is_file():
+            return (
+                status_text,
+                log,
+                str(path),
+                f"生成完了。自動再生します: {path.name}",
+                str(path),
+            )
+    return status_text, log, gr.update(), gr.update(), loaded
 
 
 def _stop_job(speaker: str | None, kind: str) -> tuple[str, str]:
@@ -1014,7 +1052,7 @@ def build_ui() -> gr.Blocks:
                 with gr.Row():
                     start_test = gr.Button("テスト音声を生成", variant="primary")
                     stop_test = gr.Button("テストを停止", variant="stop")
-                    load_test_audio = gr.Button("生成音声をプレイヤーへ読み込む")
+                    load_test_audio = gr.Button("生成音声を再読み込み")
                 test_output = gr.Textbox(label="今回の音声出力先", interactive=False)
                 test_status = gr.Textbox(label="テストジョブ状態", interactive=False)
                 test_log = gr.Textbox(label="テストログ", lines=14, interactive=False)
@@ -1023,7 +1061,9 @@ def build_ui() -> gr.Blocks:
                     label="生成音声",
                     type="filepath",
                     interactive=False,
+                    autoplay=True,
                 )
+                test_loaded_output = gr.State("")
 
         refresh_speakers.click(_refresh_speakers, inputs=[speaker], outputs=[speaker, speaker_status])
         speaker.change(_speaker_status, inputs=[speaker], outputs=[speaker_status])
@@ -1114,7 +1154,14 @@ def build_ui() -> gr.Blocks:
                 test_num_steps,
                 test_seed,
             ],
-            outputs=[test_status, test_log, test_output],
+            outputs=[
+                test_status,
+                test_log,
+                test_output,
+                test_audio,
+                test_audio_status,
+                test_loaded_output,
+            ],
         )
         stop_test.click(
             lambda value: _stop_job(value, "test"),
@@ -1124,7 +1171,7 @@ def build_ui() -> gr.Blocks:
         load_test_audio.click(
             _load_test_audio,
             inputs=[test_output],
-            outputs=[test_audio, test_audio_status],
+            outputs=[test_audio, test_audio_status, test_loaded_output],
         )
 
         timer = gr.Timer(value=2.0, active=True)
@@ -1147,9 +1194,15 @@ def build_ui() -> gr.Blocks:
             show_progress="hidden",
         )
         timer.tick(
-            lambda value: _job_view(value, "test"),
-            inputs=[speaker],
-            outputs=[test_status, test_log],
+            _test_job_view,
+            inputs=[speaker, test_output, test_loaded_output],
+            outputs=[
+                test_status,
+                test_log,
+                test_audio,
+                test_audio_status,
+                test_loaded_output,
+            ],
             show_progress="hidden",
         )
 
