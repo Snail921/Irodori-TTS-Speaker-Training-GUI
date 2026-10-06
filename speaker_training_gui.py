@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import html
+from urllib.parse import quote
 from collections import deque
 import atexit
 import csv
@@ -665,7 +667,19 @@ def _start_test(
     if str(caption).strip():
         command += ["--caption", str(caption).strip()]
     message = _launch_job(speaker_dir.name, "test", command)
-    return message, "", str(output_path), gr.update(value=None, playback_position=0), "生成中です。完了後に自動再生します。", ""
+    return message, "", str(output_path), _test_audio_update(), "生成中です。完了後に自動再生します。", ""
+
+
+def _test_audio_update(path=None):
+    if path is None:
+        return gr.update(value="")
+    # A native element avoids Gradio's WaveSurfer loading effects entirely.
+    url = "/gradio_api/file=" + quote(Path(path).resolve().as_posix(), safe="/:")
+    value = (
+        '<audio controls autoplay preload="metadata" style="width:100%" '
+        f'src="{html.escape(url, quote=True)}"></audio>'
+    )
+    return gr.update(value=value)
 
 
 def _load_test_audio(output_path: str | None):
@@ -679,7 +693,7 @@ def _load_test_audio(output_path: str | None):
         raise gr.Error("テスト音声のパスが出力フォルダー外です。") from exc
     if not path.is_file():
         raise gr.Error("音声はまだ生成されていません。ジョブ完了後にもう一度押してください。")
-    return gr.update(value=str(path), playback_position=0), f"生成音声を読み込みました: {path.name}", str(path)
+    return _test_audio_update(path), f"生成音声を読み込みました: {path.name}", str(path)
 
 
 def _pid_exists(pid: int) -> bool:
@@ -861,7 +875,7 @@ def _test_job_view(
             return (
                 status_text,
                 log,
-                gr.update(value=str(path), playback_position=0),
+                _test_audio_update(path),
                 f"生成完了。自動再生します: {path.name}",
                 str(path),
             )
@@ -1258,12 +1272,10 @@ def build_ui() -> gr.Blocks:
                 test_status = gr.Textbox(label="テストジョブ状態", interactive=False)
                 test_log = gr.Textbox(label="テストログ", lines=14, interactive=False)
                 test_audio_status = gr.Textbox(label="音声の読み込み結果", interactive=False)
-                test_audio = gr.Audio(
+                test_audio = gr.HTML(
                     label="生成音声",
                     elem_id="speaker-test-audio",
-                    type="filepath",
-                    interactive=False,
-                    autoplay=True,
+                    value="",
                 )
                 test_loaded_output = gr.State("")
 

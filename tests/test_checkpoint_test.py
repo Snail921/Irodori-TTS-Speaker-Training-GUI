@@ -78,8 +78,7 @@ class CheckpointTestFunctions(unittest.TestCase):
 
         self.assertEqual(status, "started")
         self.assertEqual(log, "")
-        self.assertIsNone(audio["value"])
-        self.assertEqual(audio["playback_position"], 0)
+        self.assertEqual(audio["value"], "")
         self.assertIn("自動再生", audio_status)
         self.assertEqual(loaded, "")
         self.assertTrue(output.endswith(".wav"))
@@ -95,8 +94,8 @@ class CheckpointTestFunctions(unittest.TestCase):
         output = self.embedding.parent / "sample.wav"
         output.write_bytes(b"RIFF-test")
         audio, message, loaded = gui._load_test_audio(str(output))
-        self.assertEqual(audio["value"], str(output.resolve()))
-        self.assertEqual(audio["playback_position"], 0)
+        self.assertIn("<audio controls autoplay", audio["value"])
+        self.assertIn("sample.wav", audio["value"])
         self.assertEqual(loaded, str(output.resolve()))
 
     def test_regeneration_with_new_path_resets_playback_position(self) -> None:
@@ -108,8 +107,8 @@ class CheckpointTestFunctions(unittest.TestCase):
         status_path.write_text(json.dumps({"state": "completed", "exit_code": 0,
                                           "command": ["--output-wav", str(new)]}), encoding="utf-8")
         result = gui._test_job_view("Alice", str(new), str(old))
-        self.assertEqual(result[2]["value"], str(new.resolve()))
-        self.assertEqual(result[2]["playback_position"], 0)
+        self.assertIn("<audio controls autoplay", result[2]["value"])
+        self.assertIn("new.wav", result[2]["value"])
 
     def test_completed_test_is_loaded_only_once(self) -> None:
         output = self.embedding.parent / "tests" / "sample.wav"
@@ -130,8 +129,8 @@ class CheckpointTestFunctions(unittest.TestCase):
         log_path.write_text("done", encoding="utf-8")
 
         first = gui._test_job_view("Alice", str(output), "")
-        self.assertEqual(first[2]["value"], str(output.resolve()))
-        self.assertEqual(first[2]["playback_position"], 0)
+        self.assertIn("<audio controls autoplay", first[2]["value"])
+        self.assertIn("sample.wav", first[2]["value"])
         self.assertIn("自動再生", first[3])
         self.assertEqual(first[4], str(output.resolve()))
 

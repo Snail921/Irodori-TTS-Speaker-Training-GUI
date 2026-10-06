@@ -282,3 +282,5 @@ This repository is provided under the [MIT License](../LICENSE). Irodori-TTS, Wh
 ## Persistent test model
 
 The first test loads the model; subsequent tests reuse it, including when switching speaker embeddings. Changing the base model or precision reloads it. Use the release-model button to free GPU memory. Starting training, manifest preparation, or transcription automatically stops the test worker. Stopping a test or exiting the GUI also ends the worker; the next test reloads the model. Other API servers must be stopped separately.
+
+Test audio uses the native browser player without a waveform. It starts from the beginning on completion. If the browser blocks autoplay, click the Play button.
