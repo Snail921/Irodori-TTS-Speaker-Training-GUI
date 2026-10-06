@@ -74,7 +74,7 @@ Start the Whisper server, then double-click `start_speaker_training_gui.bat`. Th
 
 If the browser does not open automatically, visit <http://127.0.0.1:7862>.
 
-Run `stop_speaker_training_gui.bat` to stop the GUI server. Closing the browser tab does not stop it. To terminate an active transcription, manifest, or training process, use its Stop button in the GUI first.
+Keep the launcher console open. Press `Ctrl+C` in that console to stop the GUI, its active jobs, and its persistent test worker. Closing the browser tab does not stop the server. The stop batch remains a fallback; stop active jobs in the GUI before using it.
 
 ## 5. Preparing speaker data
 

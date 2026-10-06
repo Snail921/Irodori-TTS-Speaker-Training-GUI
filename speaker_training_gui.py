@@ -38,6 +38,7 @@ APPROVED_METADATA_NAME = "approved_metadata.jsonl"
 UI_VERSION = "persistent-test-worker-v3 / 2026-10-06"
 _JOB_LOCK = threading.RLock()
 _TEST_WORKER = None
+_OWNED_JOBS = {}
 
 
 def _release_test_worker() -> str:
@@ -49,7 +50,25 @@ def _release_test_worker() -> str:
         return "テスト用モデルを解放しました。次回のテスト時に再読み込みします。"
 
 
-atexit.register(_release_test_worker)
+def _shutdown_jobs():
+    with _JOB_LOCK:
+        _release_test_worker()
+        for (speaker, kind), process in list(_OWNED_JOBS.items()):
+            if process.poll() is None:
+                subprocess.run(
+                    ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
+                    capture_output=True, check=False,
+                )
+                process.wait(timeout=15)
+                status_path, _ = _job_files(speaker, kind)
+                status = _read_status(status_path)
+                if status.get("pid") == process.pid and status.get("state") == "running":
+                    status.update(state="stopped", finished_at=datetime.now().astimezone().isoformat(timespec="seconds"), exit_code=-9)
+                    _atomic_json(status_path, status)
+        _OWNED_JOBS.clear()
+
+
+atexit.register(_shutdown_jobs)
 
 TEST_AUDIO_PLAY_JS = r"""
 async () => {
@@ -669,6 +688,7 @@ def _launch_job_locked(speaker: str, kind: str, command: list[str]) -> str:
         stderr=subprocess.DEVNULL,
         creationflags=creationflags,
     )
+    _OWNED_JOBS[(speaker, kind)] = process
     _atomic_json(
         status_path,
         {
@@ -1309,13 +1329,19 @@ def main() -> None:
     args = parser.parse_args()
     demo = build_ui()
     demo.queue(default_concurrency_limit=4)
-    demo.launch(
-        server_name=args.server_name,
-        server_port=args.server_port,
-        share=bool(args.share),
-        js=REVIEW_AUDIO_REPLAY_JS,
-        allowed_paths=[str(SPEAKER_ROOT.resolve()), str(EMBEDDING_ROOT.resolve())],
-    )
+    try:
+        demo.launch(
+            server_name=args.server_name,
+            server_port=args.server_port,
+            share=bool(args.share),
+            inbrowser=True,
+            js=REVIEW_AUDIO_REPLAY_JS,
+            allowed_paths=[str(SPEAKER_ROOT.resolve()), str(EMBEDDING_ROOT.resolve())],
+        )
+    finally:
+        _shutdown_jobs()
+        demo.close()
+
 
 
 if __name__ == "__main__":

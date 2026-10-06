@@ -69,6 +69,7 @@ if defined PORT_PID (
 echo ============================================================
 echo  Irodori Speaker Training GUI
 echo  KEEP THIS WINDOW OPEN while using the GUI.
+echo  Press Ctrl+C in this window to stop the GUI and its jobs.
 echo  GUI: http://127.0.0.1:7862
 echo  Whisper: %MIRAI_WHISPER_URL%
 echo  Irodori repository: %IRODORI_TTS_ROOT%
@@ -76,7 +77,6 @@ echo  GUI data: %GUI_ROOT%
 echo  UI Version: persistent-test-worker-v3 / 2026-10-06
 echo  Long jobs run in the background and can be stopped in the GUI.
 echo ============================================================
-start "" /b powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%GUI_ROOT%open_when_ready.ps1" -Url "http://127.0.0.1:7862"
 uv run --no-sync python "%GUI_ROOT%speaker_training_gui.py" --server-name 127.0.0.1 --server-port 7862
 set "EXIT_CODE=%ERRORLEVEL%"
 echo.

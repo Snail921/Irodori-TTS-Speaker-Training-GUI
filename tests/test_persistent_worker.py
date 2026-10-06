@@ -38,7 +38,7 @@ class WorkerTests(unittest.TestCase):
             with patch.object(gui, '_running_job', return_value=None), \
                  patch.object(gui, '_job_files', return_value=(root/'status.json', root/'log')), \
                  patch.object(gui, '_release_test_worker', side_effect=lambda: events.append('release')), \
-                 patch.object(gui.subprocess, 'Popen', side_effect=lambda *a, **kw: events.append('launch') or SimpleNamespace(pid=123)):
+                 patch.object(gui.subprocess, 'Popen', side_effect=lambda *a, **kw: events.append('launch') or SimpleNamespace(pid=123, poll=lambda: 0)):
                 gui._launch_job('Alice', 'train', ['python', 'train.py'])
             self.assertEqual(events, ['release', 'launch'])
 
@@ -48,6 +48,28 @@ class WorkerTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 gui._launch_job('Alice', 'test', [])
             worker.submit.assert_not_called()
+
+    def test_shutdown_stops_only_owned_running_jobs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            status = Path(tmp) / "status.json"
+            status.write_text('{"pid": 123, "state": "running"}', encoding="utf-8")
+            running = Mock(pid=123)
+            running.poll.return_value = None
+            finished = Mock(pid=456)
+            finished.poll.return_value = 0
+            owned = {('Alice', 'train'): running, ('Bob', 'prepare'): finished}
+            with patch.object(gui, '_OWNED_JOBS', owned), \
+                 patch.object(gui, '_release_test_worker') as release, \
+                 patch.object(gui, '_job_files', return_value=(status, Path(tmp)/'log')), \
+                 patch.object(gui.subprocess, 'run') as kill:
+                gui._shutdown_jobs()
+                release.assert_called_once()
+                kill.assert_called_once()
+                self.assertEqual(kill.call_args.args[0], ['taskkill.exe', '/PID', '123', '/T', '/F'])
+                running.wait.assert_called_once()
+                finished.wait.assert_not_called()
+                self.assertEqual(owned, {})
+                self.assertIn('stopped', status.read_text(encoding='utf-8'))
 
     def test_release_waits_for_worker_and_clears_reference(self):
         worker = Mock()
