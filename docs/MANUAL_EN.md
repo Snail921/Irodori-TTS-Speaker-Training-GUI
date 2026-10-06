@@ -74,7 +74,7 @@ Start the Whisper server, then double-click `start_speaker_training_gui.bat`. Th
 
 If the browser does not open automatically, visit <http://127.0.0.1:7862>.
 
-Keep the launcher console open. Press `Ctrl+C` in that console to stop the GUI, its active jobs, and its persistent test worker. Closing the browser tab does not stop the server. 
+Keep the launcher console open. Press `Ctrl+C` in that console to stop the GUI, its active jobs, and its persistent test worker. Closing the browser tab does not stop the server.
 
 ## 5. Preparing speaker data
 
