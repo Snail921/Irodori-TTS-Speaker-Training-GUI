@@ -1089,6 +1089,10 @@ def build_ui() -> gr.Blocks:
                     "学習・前処理・文字起こし開始時には自動解放します。手動で解放することもできます。"
                     "テスト推論もGPUを使用するため、学習中や別のIrodori-TTS推論処理との同時実行は避けてください。"
                 )
+                test_checkpoint = gr.Textbox(
+                    label="V4/V4.1-Small Base Model",
+                    value=_default_checkpoint(),
+                )
                 with gr.Row():
                     test_embedding = gr.Dropdown(
                         label="テストするSpeaker Embedding",
@@ -1105,10 +1109,6 @@ def build_ui() -> gr.Blocks:
                         else "Speaker Embeddingがありません。先に学習を完了してください。"
                     ),
                     interactive=False,
-                )
-                test_checkpoint = gr.Textbox(
-                    label="V4/V4.1-Small Base Model",
-                    value=_default_checkpoint(),
                 )
                 test_text = gr.Textbox(
                     label="読み上げテキスト",
