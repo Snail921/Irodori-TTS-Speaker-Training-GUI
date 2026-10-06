@@ -78,7 +78,8 @@ class CheckpointTestFunctions(unittest.TestCase):
 
         self.assertEqual(status, "started")
         self.assertEqual(log, "")
-        self.assertIsNone(audio)
+        self.assertIsNone(audio["value"])
+        self.assertEqual(audio["playback_position"], 0)
         self.assertIn("自動再生", audio_status)
         self.assertEqual(loaded, "")
         self.assertTrue(output.endswith(".wav"))
@@ -89,6 +90,26 @@ class CheckpointTestFunctions(unittest.TestCase):
         self.assertEqual(command[command.index("--num-steps") + 1], "40")
         self.assertEqual(command[command.index("--ref-embed") + 1], str(self.embedding))
         self.assertEqual(command[command.index("--caption") + 1], "落ち着いた声")
+
+    def test_manual_reload_resets_playback_position(self) -> None:
+        output = self.embedding.parent / "sample.wav"
+        output.write_bytes(b"RIFF-test")
+        audio, message, loaded = gui._load_test_audio(str(output))
+        self.assertEqual(audio["value"], str(output.resolve()))
+        self.assertEqual(audio["playback_position"], 0)
+        self.assertEqual(loaded, str(output.resolve()))
+
+    def test_regeneration_with_new_path_resets_playback_position(self) -> None:
+        old = self.embedding.parent / "old.wav"
+        new = self.embedding.parent / "new.wav"
+        new.write_bytes(b"RIFF-test")
+        status_path, _ = gui._job_files("Alice", "test")
+        status_path.parent.mkdir(parents=True)
+        status_path.write_text(json.dumps({"state": "completed", "exit_code": 0,
+                                          "command": ["--output-wav", str(new)]}), encoding="utf-8")
+        result = gui._test_job_view("Alice", str(new), str(old))
+        self.assertEqual(result[2]["value"], str(new.resolve()))
+        self.assertEqual(result[2]["playback_position"], 0)
 
     def test_completed_test_is_loaded_only_once(self) -> None:
         output = self.embedding.parent / "tests" / "sample.wav"
@@ -109,7 +130,8 @@ class CheckpointTestFunctions(unittest.TestCase):
         log_path.write_text("done", encoding="utf-8")
 
         first = gui._test_job_view("Alice", str(output), "")
-        self.assertEqual(first[2], str(output.resolve()))
+        self.assertEqual(first[2]["value"], str(output.resolve()))
+        self.assertEqual(first[2]["playback_position"], 0)
         self.assertIn("自動再生", first[3])
         self.assertEqual(first[4], str(output.resolve()))
 

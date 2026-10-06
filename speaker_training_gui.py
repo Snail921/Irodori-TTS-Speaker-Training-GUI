@@ -481,7 +481,7 @@ def _start_test(
     precision: str,
     num_steps: int,
     seed: int,
-) -> tuple[str, str, str, None, str, str]:
+):
     speaker_dir = _speaker_dir(speaker)
     embedding = _resolve_embedding(speaker, embedding_selection)
     infer_script = IRODORI_ROOT / "infer.py"
@@ -531,10 +531,10 @@ def _start_test(
     if str(caption).strip():
         command += ["--caption", str(caption).strip()]
     message = _launch_job(speaker_dir.name, "test", command)
-    return message, "", str(output_path), None, "生成中です。完了後に自動再生します。", ""
+    return message, "", str(output_path), gr.update(value=None, playback_position=0), "生成中です。完了後に自動再生します。", ""
 
 
-def _load_test_audio(output_path: str | None) -> tuple[str, str, str]:
+def _load_test_audio(output_path: str | None):
     raw = str(output_path or "").strip()
     if not raw:
         raise gr.Error("先にテスト音声を生成してください。")
@@ -545,7 +545,7 @@ def _load_test_audio(output_path: str | None) -> tuple[str, str, str]:
         raise gr.Error("テスト音声のパスが出力フォルダー外です。") from exc
     if not path.is_file():
         raise gr.Error("音声はまだ生成されていません。ジョブ完了後にもう一度押してください。")
-    return str(path), f"生成音声を読み込みました: {path.name}", str(path)
+    return gr.update(value=str(path), playback_position=0), f"生成音声を読み込みました: {path.name}", str(path)
 
 
 def _pid_exists(pid: int) -> bool:
@@ -717,7 +717,7 @@ def _test_job_view(
             return (
                 status_text,
                 log,
-                str(path),
+                gr.update(value=str(path), playback_position=0),
                 f"生成完了。自動再生します: {path.name}",
                 str(path),
             )
@@ -1103,9 +1103,14 @@ def build_ui() -> gr.Blocks:
                     )
                 with gr.Row():
                     start_test = gr.Button("テスト音声を生成", variant="primary")
-                    stop_test = gr.Button("テストを停止", variant="stop")
-                    load_test_audio = gr.Button("生成音声を再読み込み")
+                    stop_test = gr.Button("生成を中断", variant="stop")
+                    load_test_audio = gr.Button("音声の読み込みを再試行")
                     release_test_model = gr.Button("テスト用モデルを解放")
+                gr.Markdown(
+                    "「生成を中断」は実行中の生成を止めます（次回はモデルを再読み込みします）。"
+                    "「音声の読み込みを再試行」は、完了済みの音声がプレイヤーに表示されない場合に使います。"
+                    "音声を再生成する操作ではありません。聴き直す場合はプレイヤーの再生ボタンを使ってください。"
+                )
                 test_output = gr.Textbox(label="今回の音声出力先", interactive=False)
                 test_status = gr.Textbox(label="テストジョブ状態", interactive=False)
                 test_log = gr.Textbox(label="テストログ", lines=14, interactive=False)

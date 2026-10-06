@@ -162,7 +162,9 @@ Tab **4. Test** synthesizes speech with each saved `*.speaker.safetensors` so yo
 4. Start test synthesis.
 5. When the job reaches `completed` with exit code `0`, the generated audio is loaded into the player and played automatically.
 
-If browser autoplay restrictions prevent playback, click **Reload generated audio**.
+If the completed audio is missing from the player, click the retry-loading button. It reloads the saved file without generating new audio. Use the player's Play button to listen again or when autoplay is blocked.
+
+The cancel-generation button stops an active test and terminates its worker. It is different from pausing playback; the next generation will reload the model.
 
 For a fair comparison, keep the text, caption, precision, number of steps, and seed unchanged; switch only the Speaker Embedding. The default seed is `1234`. Evaluate speaker similarity, pronunciation, accent, artifacts, consistency on longer sentences, and caption response. Test several different sentences rather than choosing from a single sample. The GUI deliberately does not assign an automatic quality score or ranking.
 
