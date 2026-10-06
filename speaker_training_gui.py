@@ -51,6 +51,37 @@ def _release_test_worker() -> str:
 
 atexit.register(_release_test_worker)
 
+TEST_AUDIO_PLAY_JS = r"""
+async () => {
+    const root = document.getElementById("speaker-test-audio");
+    const findAudio = (node) => {
+        if (!node) return null;
+        if (node.tagName === "AUDIO" && (node.currentSrc || node.src)) return node;
+        if (node.shadowRoot) {
+            const found = findAudio(node.shadowRoot);
+            if (found) return found;
+        }
+        for (const child of node.children || []) {
+            const found = findAudio(child);
+            if (found) return found;
+        }
+        return null;
+    };
+    const audio = findAudio(root);
+    if (!audio) return "再生する音声がありません。生成完了を待ってください。";
+    if (audio.readyState < 2) return "音声を読み込み中です。少し待ってから再生してください。";
+    try {
+        audio.pause();
+        audio.currentTime = 0;
+        await audio.play();
+        return "先頭から再生しています。";
+    } catch (error) {
+        return "再生できませんでした。プレイヤーの再生ボタンもお試しください。";
+    }
+}
+"""
+
+
 REVIEW_AUDIO_REPLAY_JS = r"""
 () => {
     if (window.__irodoriReviewAudioReplayInstalled) return;
@@ -1104,12 +1135,11 @@ def build_ui() -> gr.Blocks:
                 with gr.Row():
                     start_test = gr.Button("テスト音声を生成", variant="primary")
                     stop_test = gr.Button("生成を中断", variant="stop")
-                    load_test_audio = gr.Button("音声の読み込みを再試行")
+                    play_test_audio = gr.Button("再生")
                     release_test_model = gr.Button("テスト用モデルを解放")
                 gr.Markdown(
                     "「生成を中断」は実行中の生成を止めます（次回はモデルを再読み込みします）。"
-                    "「音声の読み込みを再試行」は、完了済みの音声がプレイヤーに表示されない場合に使います。"
-                    "音声を再生成する操作ではありません。聴き直す場合はプレイヤーの再生ボタンを使ってください。"
+                    "「再生」は表示中の音声を先頭から再生します。自動再生されなかった場合や聴き直す場合に使ってください。"
                 )
                 test_output = gr.Textbox(label="今回の音声出力先", interactive=False)
                 test_status = gr.Textbox(label="テストジョブ状態", interactive=False)
@@ -1117,6 +1147,7 @@ def build_ui() -> gr.Blocks:
                 test_audio_status = gr.Textbox(label="音声の読み込み結果", interactive=False)
                 test_audio = gr.Audio(
                     label="生成音声",
+                    elem_id="speaker-test-audio",
                     type="filepath",
                     interactive=False,
                     autoplay=True,
@@ -1227,10 +1258,12 @@ def build_ui() -> gr.Blocks:
             outputs=[test_status, test_log],
         )
         release_test_model.click(_release_test_worker, outputs=[test_status])
-        load_test_audio.click(
-            _load_test_audio,
-            inputs=[test_output],
-            outputs=[test_audio, test_audio_status, test_loaded_output],
+        play_test_audio.click(
+            fn=None,
+            inputs=[],
+            outputs=[test_audio_status],
+            js=TEST_AUDIO_PLAY_JS,
+            queue=False,
         )
 
         timer = gr.Timer(value=2.0, active=True)

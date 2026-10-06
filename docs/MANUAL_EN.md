@@ -162,7 +162,7 @@ Tab **4. Test** synthesizes speech with each saved `*.speaker.safetensors` so yo
 4. Start test synthesis.
 5. When the job reaches `completed` with exit code `0`, the generated audio is loaded into the player and played automatically.
 
-If the completed audio is missing from the player, click the retry-loading button. It reloads the saved file without generating new audio. Use the player's Play button to listen again or when autoplay is blocked.
+The Play button plays the displayed audio from the beginning. Use it to listen again or when autoplay is blocked. It does not regenerate audio.
 
 The cancel-generation button stops an active test and terminates its worker. It is different from pausing playback; the next generation will reload the model.
 
