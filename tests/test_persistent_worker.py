@@ -36,6 +36,7 @@ class WorkerTests(unittest.TestCase):
             root = Path(tmp)
             events = []
             with patch.object(gui, '_running_job', return_value=None), \
+                 patch.object(gui, 'LogMirror'), \
                  patch.object(gui, '_job_files', return_value=(root/'status.json', root/'log')), \
                  patch.object(gui, '_release_test_worker', side_effect=lambda: events.append('release')), \
                  patch.object(gui.subprocess, 'Popen', side_effect=lambda *a, **kw: events.append('launch') or SimpleNamespace(pid=123, poll=lambda: 0)):

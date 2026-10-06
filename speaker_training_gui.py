@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
+from collections import deque
 import atexit
 import csv
 import ctypes
@@ -18,7 +20,9 @@ from pathlib import Path
 from typing import Any
 
 import gradio as gr
+from starlette.middleware import Middleware
 from speaker_training_test_worker import TestWorker
+from speaker_training_job_runner import LogMirror
 
 
 ROOT = Path(__file__).resolve().parent
@@ -39,6 +43,80 @@ UI_VERSION = "persistent-test-worker-v3 / 2026-10-06"
 _JOB_LOCK = threading.RLock()
 _TEST_WORKER = None
 _OWNED_JOBS = {}
+_LOG_MIRRORS = {}
+_NETWORK_REQUESTS = deque(maxlen=100)
+_NETWORK_LOCK = threading.Lock()
+
+
+def _network_log(message):
+    line = f"[{datetime.now().astimezone().isoformat(timespec='milliseconds')}] [network] {message}"
+    with _NETWORK_LOCK:
+        print(line, flush=True)
+        path = JOBS_ROOT / "network.log"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as log:
+            log.write(line + "\n")
+
+
+def _network_exception(loop, context, previous=None):
+    handle = context.get("handle")
+    callback = getattr(handle, "_callback", None)
+    transport = context.get("transport") or getattr(callback, "__self__", None)
+    peer = None
+    try:
+        peer = transport.get_extra_info("peername")
+    except (AttributeError, OSError):
+        pass
+    recent = [item for item in _NETWORK_REQUESTS if peer and item[0] and tuple(item[0]) == tuple(peer)]
+    candidates = recent[-5:] if peer else list(_NETWORK_REQUESTS)[-5:]
+    _network_log(f"async exception peer={peer} callback={callback!r} exception={context.get('exception')!r} recent_requests={candidates} peer_matched={bool(peer and recent)}")
+    if previous is not None:
+        previous(loop, context)
+    else:
+        loop.default_exception_handler(context)
+
+
+class NetworkDiagnostics:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        loop = asyncio.get_running_loop()
+        if not getattr(loop, "_irodori_diagnostics", False):
+            previous = loop.get_exception_handler()
+            loop.set_exception_handler(lambda lp, ctx: _network_exception(lp, ctx, previous))
+            loop._irodori_diagnostics = True
+        peer = scope.get("client")
+        path = scope.get("path", "")
+        headers = dict(scope.get("headers", []))
+        byte_range = headers.get(b"range", b"").decode("ascii", errors="replace")
+        _NETWORK_REQUESTS.append((peer, scope.get("method"), path, byte_range, time.monotonic()))
+        media = "/file=" in path
+        started = time.monotonic()
+        status = None
+        size = 0
+        async def observed_receive():
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                _network_log(f"disconnect peer={peer} path={path} range={byte_range} elapsed={time.monotonic()-started:.3f}s")
+            return message
+        async def observed_send(message):
+            nonlocal status, size
+            if message["type"] == "http.response.start":
+                status = message["status"]
+            if message["type"] == "http.response.body":
+                size += len(message.get("body", b""))
+            await send(message)
+        try:
+            await self.app(scope, observed_receive, observed_send)
+        except BaseException as exc:
+            _network_log(f"request exception peer={peer} path={path} range={byte_range} exception={exc!r}")
+            raise
+        finally:
+            if media:
+                _network_log(f"audio response peer={peer} path={path} range={byte_range} status={status} bytes={size} elapsed={time.monotonic()-started:.3f}s")
 
 
 def _release_test_worker() -> str:
@@ -66,6 +144,9 @@ def _shutdown_jobs():
                     status.update(state="stopped", finished_at=datetime.now().astimezone().isoformat(timespec="seconds"), exit_code=-9)
                     _atomic_json(status_path, status)
         _OWNED_JOBS.clear()
+        for mirror in _LOG_MIRRORS.values():
+            mirror.stop()
+        _LOG_MIRRORS.clear()
 
 
 atexit.register(_shutdown_jobs)
@@ -642,7 +723,16 @@ def _running_job() -> dict[str, Any] | None:
 
 def _launch_job(speaker: str, kind: str, command: list[str]) -> str:
     with _JOB_LOCK:
-        return _launch_job_locked(speaker, kind, command)
+        if _running_job():
+            return _launch_job_locked(speaker, kind, command)
+        key = (speaker, kind)
+        previous = _LOG_MIRRORS.pop(key, None)
+        if previous is not None:
+            previous.stop()
+        result = _launch_job_locked(speaker, kind, command)
+        status_path, log_path = _job_files(speaker, kind)
+        _LOG_MIRRORS[key] = LogMirror(status_path, log_path, f"{speaker}/{kind}")
+        return result
 
 
 def _launch_job_locked(speaker: str, kind: str, command: list[str]) -> str:
@@ -1335,6 +1425,7 @@ def main() -> None:
             server_port=args.server_port,
             share=bool(args.share),
             inbrowser=True,
+            app_kwargs={"middleware": [Middleware(NetworkDiagnostics)]},
             js=REVIEW_AUDIO_REPLAY_JS,
             allowed_paths=[str(SPEAKER_ROOT.resolve()), str(EMBEDDING_ROOT.resolve())],
         )

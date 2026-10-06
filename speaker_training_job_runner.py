@@ -36,6 +36,45 @@ def atomic_json(path: Path, payload: dict) -> None:
         pass
 
 
+class LogMirror:
+    """Tail the same log file the GUI reads, without duplicating it on every poll."""
+    def __init__(self, status_path, log_path, label):
+        import threading
+        self.status_path, self.log_path, self.label = status_path, log_path, label
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self.run, daemon=True)
+        self.thread.start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.thread.join(timeout=3)
+
+    def run(self):
+        import codecs
+        offset = 0
+        decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        def drain():
+            nonlocal offset
+            try:
+                with self.log_path.open("rb") as handle:
+                    handle.seek(offset)
+                    data = handle.read()
+                    offset = handle.tell()
+            except OSError:
+                return
+            if data:
+                print(f"[{self.label}] " + decoder.decode(data), end="", flush=True)
+        while True:
+            drain()
+            try:
+                state = json.loads(self.status_path.read_text(encoding="utf-8")).get("state")
+            except (OSError, ValueError):
+                state = "running"
+            if state != "running" or self.stop_event.wait(0.2):
+                drain()
+                break
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detached job runner for Speaker Training GUI")
     parser.add_argument("--status", required=True)

@@ -1,6 +1,8 @@
 @echo off
 setlocal
 chcp 65001 >nul
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
 title Irodori Speaker Training GUI - KEEP THIS WINDOW OPEN
 set "GUI_ROOT=%~dp0"
 set "IRODORI_CANDIDATE="
