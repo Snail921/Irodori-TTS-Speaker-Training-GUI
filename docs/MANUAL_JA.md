@@ -6,7 +6,7 @@
 
 - Irodori-TTS本体をインストールし、GPU用のPython環境とベースモデルを準備します。
 - Whisperサーバーを起動します（既定ポート: `8000`）。
-- 学習GUIのZIPをダウンロード・展開し、README記載の7ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。
+- 学習GUIのZIPをダウンロード・展開し、README記載の8ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。
 - `speaker-training/<話者名>/audio/` に学習用の音声を入れます。
 - `start_speaker_training_gui.bat` をダブルクリックしてGUIを開きます。
 - 話者を選び、「1. 文字起こし」で文字起こしを実行します。
@@ -57,7 +57,7 @@ http://127.0.0.1:8000/health
 
 ### 3.3 学習GUI
 
-リポジトリのZIPをダウンロードして展開し、READMEに記載した7ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。READMEやLICENSE、docs、testsを本体へ上書きする必要はありません。
+リポジトリのZIPをダウンロードして展開し、READMEに記載した8ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。READMEやLICENSE、docs、testsを本体へ上書きする必要はありません。
 
 ```text
 Irodori-TTS/
@@ -285,3 +285,7 @@ git pull
 ## 12. ライセンス
 
 このリポジトリは[MIT License](../LICENSE)で提供されます。Irodori-TTS、Whisper、モデル、学習素材にはそれぞれのライセンスと利用条件が適用されます。
+
+## テスト用モデルの保持
+
+テストは初回のみモデルを読み込み、以降は再利用します。話者埋め込みを切り替えて比較できます。ベースモデルやPrecision変更時は再読み込みします。「テスト用モデルを解放」で手動解放できます。学習・manifest作成・文字起こし開始前とGUI終了時は自動解放します。テスト停止後の次回生成は再読み込みします。

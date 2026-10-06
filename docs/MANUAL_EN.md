@@ -6,7 +6,7 @@
 
 - Install Irodori-TTS and prepare its GPU Python environment and base model.
 - Start the Whisper server (default port: `8000`).
-- Download and extract the training GUI ZIP. Copy the seven files listed in the README into the Irodori-TTS folder containing `train.py`.
+- Download and extract the training GUI ZIP. Copy the eight files listed in the README into the Irodori-TTS folder containing `train.py`.
 - Place training audio in `speaker-training/<speaker>/audio/`.
 - Double-click `start_speaker_training_gui.bat` to open the GUI.
 - Select a speaker and run transcription in the first tab.
@@ -57,7 +57,7 @@ http://127.0.0.1:8000/health
 
 ### 3.3 Training GUI
 
-Download and extract the repository ZIP. Copy the seven runtime files listed in the README into the configured Irodori-TTS folder containing `train.py`. Do not overwrite the upstream README, LICENSE, docs, or tests.
+Download and extract the repository ZIP. Copy the eight runtime files listed in the README into the configured Irodori-TTS folder containing `train.py`. Do not overwrite the upstream README, LICENSE, docs, or tests.
 
 No separate Python environment is required. Double-click the copied `start_speaker_training_gui.bat`. Data lives under `speaker-training/<speaker>/audio/`, and embeddings under `speaker-embeddings/`, beside the launcher.
 
@@ -276,3 +276,7 @@ Stop and restart the GUI after updating.
 ## 12. License
 
 This repository is provided under the [MIT License](../LICENSE). Irodori-TTS, Whisper, model weights, and training material remain subject to their respective licenses and terms.
+
+## Persistent test model
+
+The first test loads the model; subsequent tests reuse it, including when switching speaker embeddings. Changing the base model or precision reloads it. Use the release-model button to free GPU memory. Starting training, manifest preparation, or transcription automatically stops the test worker. Stopping a test or exiting the GUI also ends the worker; the next test reloads the model. Other API servers must be stopped separately.

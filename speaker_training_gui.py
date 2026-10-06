@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import csv
 import ctypes
 import json
@@ -11,11 +12,13 @@ import signal
 import subprocess
 import sys
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import gradio as gr
+from speaker_training_test_worker import TestWorker
 
 
 ROOT = Path(__file__).resolve().parent
@@ -32,7 +35,21 @@ WHISPER_CLIENT = ROOT / "speaker_training_transcribe_client.py"
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac", ".wma"}
 REVIEW_HEADERS = ["audio", "text", "approved", "asr_status", "notes"]
 APPROVED_METADATA_NAME = "approved_metadata.jsonl"
-UI_VERSION = "checkpoint-autoplay-v2.9 / 2026-09-18"
+UI_VERSION = "persistent-test-worker-v3 / 2026-10-06"
+_JOB_LOCK = threading.RLock()
+_TEST_WORKER = None
+
+
+def _release_test_worker() -> str:
+    global _TEST_WORKER
+    with _JOB_LOCK:
+        if _TEST_WORKER is not None:
+            _TEST_WORKER.stop()
+            _TEST_WORKER = None
+        return "テスト用モデルを解放しました。次回のテスト時に再読み込みします。"
+
+
+atexit.register(_release_test_worker)
 
 REVIEW_AUDIO_REPLAY_JS = r"""
 () => {
@@ -574,12 +591,25 @@ def _running_job() -> dict[str, Any] | None:
 
 
 def _launch_job(speaker: str, kind: str, command: list[str]) -> str:
+    with _JOB_LOCK:
+        return _launch_job_locked(speaker, kind, command)
+
+
+def _launch_job_locked(speaker: str, kind: str, command: list[str]) -> str:
+    global _TEST_WORKER
     active = _running_job()
     if active:
         raise gr.Error(f"別のジョブが実行中です: {active.get('speaker')} / {active.get('kind')}")
     status_path, log_path = _job_files(speaker, kind)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text("", encoding="utf-8")
+    if kind == "test":
+        if _TEST_WORKER is None:
+            _TEST_WORKER = TestWorker(str(GUI_PYTHON), ROOT / "speaker_training_test_worker.py", IRODORI_ROOT)
+        pid = _TEST_WORKER.submit(command, status_path, log_path, speaker)
+        return f"開始しました: {speaker} / test (PID {pid})"
+    # All non-test jobs release the test model, including Whisper transcription.
+    _release_test_worker()
     runner = [
         str(GUI_PYTHON),
         str(ROOT / "speaker_training_job_runner.py"),
@@ -695,12 +725,19 @@ def _test_job_view(
 
 
 def _stop_job(speaker: str | None, kind: str) -> tuple[str, str]:
+    with _JOB_LOCK:
+        return _stop_job_locked(speaker, kind)
+
+
+def _stop_job_locked(speaker: str | None, kind: str) -> tuple[str, str]:
     status_path, log_path = _job_files(str(speaker), kind)
     status = _read_status(status_path)
     if status.get("state") != "running":
         return "実行中のジョブはありません。", _tail(log_path)
     pid = int(status.get("pid") or 0)
-    if pid > 0 and _pid_exists(pid):
+    if kind == "test":
+        _release_test_worker()
+    elif pid > 0 and _pid_exists(pid):
         subprocess.run(
             ["taskkill.exe", "/PID", str(pid), "/T", "/F"],
             capture_output=True,
@@ -1017,6 +1054,8 @@ def build_ui() -> gr.Blocks:
                 gr.Markdown(
                     "学習で保存されたステップ別のSpeaker Embeddingを使って音声を生成し、聴き比べます。"
                     "比較時はテキスト・Seed・Num Steps・Precisionを同じ値にしてください。"
+                    "初回だけモデルを読み込み、以降は再利用します。ベースモデルやPrecision変更時は再読み込みします。"
+                    "学習・前処理・文字起こし開始時には自動解放します。手動で解放することもできます。"
                     "テスト推論もGPUを使用するため、学習中や別のIrodori-TTS推論処理との同時実行は避けてください。"
                 )
                 with gr.Row():
@@ -1066,6 +1105,7 @@ def build_ui() -> gr.Blocks:
                     start_test = gr.Button("テスト音声を生成", variant="primary")
                     stop_test = gr.Button("テストを停止", variant="stop")
                     load_test_audio = gr.Button("生成音声を再読み込み")
+                    release_test_model = gr.Button("テスト用モデルを解放")
                 test_output = gr.Textbox(label="今回の音声出力先", interactive=False)
                 test_status = gr.Textbox(label="テストジョブ状態", interactive=False)
                 test_log = gr.Textbox(label="テストログ", lines=14, interactive=False)
@@ -1181,6 +1221,7 @@ def build_ui() -> gr.Blocks:
             inputs=[speaker],
             outputs=[test_status, test_log],
         )
+        release_test_model.click(_release_test_worker, outputs=[test_status])
         load_test_audio.click(
             _load_test_audio,
             inputs=[test_output],

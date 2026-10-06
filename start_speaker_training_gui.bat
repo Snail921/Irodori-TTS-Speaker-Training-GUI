@@ -4,6 +4,14 @@ chcp 65001 >nul
 title Irodori Speaker Training GUI - KEEP THIS WINDOW OPEN
 set "GUI_ROOT=%~dp0"
 set "IRODORI_CANDIDATE="
+for %%F in (speaker_training_gui.py speaker_training_job_runner.py speaker_training_transcribe_client.py speaker_training_test_worker.py stop_speaker_training_gui.bat stop_speaker_training_gui.ps1 open_when_ready.ps1) do (
+  if not exist "%GUI_ROOT%%%F" (
+    echo [ERROR] Missing GUI file: %%F
+    echo Copy all eight GUI files into the same folder.
+    pause
+    exit /b 1
+  )
+)
 
 call :select_irodori "%GUI_ROOT%"
 if not defined IRODORI_CANDIDATE if defined IRODORI_TTS_ROOT call :select_irodori "%IRODORI_TTS_ROOT%"
@@ -65,7 +73,7 @@ echo  GUI: http://127.0.0.1:7862
 echo  Whisper: %MIRAI_WHISPER_URL%
 echo  Irodori repository: %IRODORI_TTS_ROOT%
 echo  GUI data: %GUI_ROOT%
-echo  UI Version: checkpoint-autoplay-v2.9 / 2026-09-18
+echo  UI Version: persistent-test-worker-v3 / 2026-10-06
 echo  Long jobs run in the background and can be stopped in the GUI.
 echo ============================================================
 start "" /b powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%GUI_ROOT%open_when_ready.ps1" -Url "http://127.0.0.1:7862"

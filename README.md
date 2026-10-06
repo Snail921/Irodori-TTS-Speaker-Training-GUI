@@ -5,12 +5,13 @@ Irodori-TTS v4/v4.1向けのSpeaker Inversion学習GUIです。既存のIrodori-
 ## 導入と起動
 
 1. Irodori-TTS本体をセットアップし、Whisperサーバーを起動します（既定: http://127.0.0.1:8000）。
-2. このリポジトリをZIPでダウンロード・展開し、次の7ファイルを、`train.py` があるIrodori-TTSフォルダへドラッグ＆ドロップします。
+2. このリポジトリをZIPでダウンロード・展開し、次の8ファイルを、`train.py` があるIrodori-TTSフォルダへドラッグ＆ドロップします。
 
 ```text
 speaker_training_gui.py
 speaker_training_job_runner.py
 speaker_training_transcribe_client.py
+speaker_training_test_worker.py
 start_speaker_training_gui.bat
 stop_speaker_training_gui.bat
 stop_speaker_training_gui.ps1
@@ -20,7 +21,7 @@ open_when_ready.ps1
 3. `Irodori-TTS/speaker-training/<話者名>/audio/` に学習音声を配置します。
 4. コピーした `start_speaker_training_gui.bat` をダブルクリックします。GUIの既定URLは http://127.0.0.1:7862 です。
 
-Irodori-TTS本体の `README.md`、`LICENSE`、`docs`、`tests` を置き換える必要はありません。上記7ファイルだけをコピーしてください。
+Irodori-TTS本体の `README.md`、`LICENSE`、`docs`、`tests` を置き換える必要はありません。上記8ファイルだけをコピーしてください。
 
 ```text
 Irodori-TTS/
@@ -32,6 +33,7 @@ Irodori-TTS/
   speaker_training_gui.py
   speaker_training_job_runner.py
   speaker_training_transcribe_client.py
+  speaker_training_test_worker.py
   start_speaker_training_gui.bat
   stop_speaker_training_gui.bat
   stop_speaker_training_gui.ps1
@@ -62,3 +64,7 @@ Irodori-TTS/
 ## License
 
 MIT。Irodori-TTS、Whisper、モデルのライセンスはそれぞれの配布元に従います。
+
+## テスト生成の高速化
+
+初回はモデルを読み込み、2回目以降は常駐プロセスで再利用します。話者埋め込みの切り替えだけではベースモデルを再読み込みしません。ベースモデルまたはPrecisionを変更すると再読み込みします。「テスト用モデルを解放」でGPUメモリを解放できます。学習・manifest作成・文字起こしの開始前にも自動解放します。テスト停止はプロセスを終了するため、次回は再読み込みします。GUI終了時も終了します。外部のAPIサーバーのモデルは別途終了してください。
