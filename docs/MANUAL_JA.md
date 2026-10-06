@@ -2,6 +2,18 @@
 
 [READMEへ戻る](../README.md) | [English Manual](MANUAL_EN.md)
 
+## Quick Start
+
+- Irodori-TTS本体をインストールし、GPU用のPython環境とベースモデルを準備します。
+- Whisperサーバーを起動します（既定ポート: `8000`）。
+- 学習GUIのZIPをダウンロード・展開し、README記載の7ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。
+- `speaker-training/<話者名>/audio/` に学習用の音声を入れます。
+- `start_speaker_training_gui.bat` をダブルクリックしてGUIを開きます。
+- 話者を選び、「1. 文字起こし」で文字起こしを実行します。
+- レビューで音声と文章を確認・修正し、学習に使う項目を承認して「修正と承認状態を保存」を押します。
+- 「3. manifest作成・学習」で「manifestを作成」を押し、完了を待ちます。
+- ベースモデルのパスと学習設定を確認し、「Speaker Embedding学習を開始」を押します（WindowsのDataLoader Workersは`0`）。
+
 ## 1. 概要
 
 このGUIは、Irodori-TTS v4/v4.1のSpeaker Inversion学習を補助します。

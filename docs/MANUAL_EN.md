@@ -2,6 +2,18 @@
 
 [Back to README](../README.md) | [日本語マニュアル](MANUAL_JA.md)
 
+## Quick Start
+
+- Install Irodori-TTS and prepare its GPU Python environment and base model.
+- Start the Whisper server (default port: `8000`).
+- Download and extract the training GUI ZIP. Copy the seven files listed in the README into the Irodori-TTS folder containing `train.py`.
+- Place training audio in `speaker-training/<speaker>/audio/`.
+- Double-click `start_speaker_training_gui.bat` to open the GUI.
+- Select a speaker and run transcription in the first tab.
+- Review the audio and transcripts, correct the text, approve the clips to use, and save the edits and approval state.
+- In the third tab, create the manifest and wait for completion.
+- Check the base model path and training settings, then start Speaker Embedding training (set DataLoader Workers to `0` on Windows).
+
 ## 1. Overview
 
 This GUI assists with Speaker Inversion training for Irodori-TTS v4/v4.1.
