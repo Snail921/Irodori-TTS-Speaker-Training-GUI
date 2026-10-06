@@ -1220,14 +1220,6 @@ def build_ui() -> gr.Blocks:
                     label="V4/V4.1-Small Base Model",
                     value=_default_checkpoint(),
                 )
-                with gr.Row():
-                    test_embedding = gr.Dropdown(
-                        label="テストするSpeaker Embedding",
-                        choices=initial_embeddings,
-                        value=initial_embedding,
-                        scale=4,
-                    )
-                    refresh_test_embeddings = gr.Button("保存済みモデルを更新", scale=1)
                 test_embedding_status = gr.Textbox(
                     label="検出状況",
                     value=(
@@ -1237,6 +1229,14 @@ def build_ui() -> gr.Blocks:
                     ),
                     interactive=False,
                 )
+                with gr.Row():
+                    test_embedding = gr.Dropdown(
+                        label="テストするSpeaker Embedding",
+                        choices=initial_embeddings,
+                        value=initial_embedding,
+                        scale=4,
+                    )
+                    refresh_test_embeddings = gr.Button("保存済みモデルを更新", scale=1)
                 test_text = gr.Textbox(
                     label="読み上げテキスト",
                     value="こんにちは。これは学習した話者の音声を確認するためのテストです。",
