@@ -54,7 +54,3 @@ Irodori-TTS/
 ## License
 
 MIT。Irodori-TTS、Whisper、モデルのライセンスはそれぞれの配布元に従います。
-
-## CLIログと通信診断
-
-GUIのジョブログはCLIにも追記分が表示されます。通信診断は `speaker-training/.jobs/network.log` に保存され、CLIにも表示されます。音声要求の接続元・Range・HTTP応答と切断時刻を記録します。`peer_matched=False` の直前要求は候補であり、切断原因の確定ではありません。元の通信例外も表示します。
