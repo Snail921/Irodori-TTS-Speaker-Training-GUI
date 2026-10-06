@@ -6,7 +6,7 @@
 
 - Install Irodori-TTS and prepare its GPU Python environment and base model.
 - Start the Whisper server (default port: `8000`).
-- Download and extract the training GUI ZIP. Copy the eight files listed in the README into the Irodori-TTS folder containing `train.py`.
+- Download and extract the training GUI ZIP. Copy the six files listed in the README into the Irodori-TTS folder containing `train.py`.
 - Place training audio in `speaker-training/<speaker>/audio/`.
 - Double-click `start_speaker_training_gui.bat` to open the GUI.
 - Select a speaker and run transcription in the first tab.
@@ -57,7 +57,7 @@ http://127.0.0.1:8000/health
 
 ### 3.3 Training GUI
 
-Download and extract the repository ZIP. Copy the eight runtime files listed in the README into the configured Irodori-TTS folder containing `train.py`. Do not overwrite the upstream README, LICENSE, docs, or tests.
+Download and extract the repository ZIP. Copy the six runtime files listed in the README into the configured Irodori-TTS folder containing `train.py`. Do not overwrite the upstream README, LICENSE, docs, or tests.
 
 No separate Python environment is required. Double-click the copied `start_speaker_training_gui.bat`. Data lives under `speaker-training/<speaker>/audio/`, and embeddings under `speaker-embeddings/`, beside the launcher.
 
@@ -74,7 +74,7 @@ Start the Whisper server, then double-click `start_speaker_training_gui.bat`. Th
 
 If the browser does not open automatically, visit <http://127.0.0.1:7862>.
 
-Keep the launcher console open. Press `Ctrl+C` in that console to stop the GUI, its active jobs, and its persistent test worker. Closing the browser tab does not stop the server. The stop batch remains a fallback; stop active jobs in the GUI before using it.
+Keep the launcher console open. Press `Ctrl+C` in that console to stop the GUI, its active jobs, and its persistent test worker. Closing the browser tab does not stop the server. 
 
 ## 5. Preparing speaker data
 
@@ -257,7 +257,7 @@ Pull the latest version, stop the old GUI, and restart it. Press `Ctrl+F5` if th
 
 ### Port 7862 is already in use
 
-Run `stop_speaker_training_gui.bat`. For safety, it refuses to terminate an unknown process that owns the port.
+Press `Ctrl+C` in the previous GUI console, then restart. If the console is unavailable, identify and end the GUI process in Task Manager.
 
 ### The manifest is stale
 

@@ -6,10 +6,10 @@ set "PYTHONIOENCODING=utf-8"
 title Irodori Speaker Training GUI - KEEP THIS WINDOW OPEN
 set "GUI_ROOT=%~dp0"
 set "IRODORI_CANDIDATE="
-for %%F in (speaker_training_gui.py speaker_training_job_runner.py speaker_training_transcribe_client.py speaker_training_test_worker.py stop_speaker_training_gui.bat stop_speaker_training_gui.ps1 open_when_ready.ps1) do (
+for %%F in (speaker_training_gui.py speaker_training_job_runner.py speaker_training_transcribe_client.py speaker_training_test_worker.py open_when_ready.ps1) do (
   if not exist "%GUI_ROOT%%%F" (
     echo [ERROR] Missing GUI file: %%F
-    echo Copy all eight GUI files into the same folder.
+    echo Copy all six GUI files into the same folder.
     pause
     exit /b 1
   )
@@ -63,7 +63,7 @@ if defined PORT_PID (
   echo ============================================================
   echo [ERROR] Port 7862 is already in use by PID %PORT_PID%.
   echo An older Speaker Training GUI may still be running.
-  echo Run stop_speaker_training_gui.bat, then start this batch again.
+  echo Press Ctrl+C in the existing GUI console, then start this batch again.
   echo ============================================================
   pause
   exit /b 2

@@ -6,7 +6,7 @@
 
 - Irodori-TTS本体をインストールし、GPU用のPython環境とベースモデルを準備します。
 - Whisperサーバーを起動します（既定ポート: `8000`）。
-- 学習GUIのZIPをダウンロード・展開し、README記載の8ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。
+- 学習GUIのZIPをダウンロード・展開し、README記載の6ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。
 - `speaker-training/<話者名>/audio/` に学習用の音声を入れます。
 - `start_speaker_training_gui.bat` をダブルクリックしてGUIを開きます。
 - 話者を選び、「1. 文字起こし」で文字起こしを実行します。
@@ -57,7 +57,7 @@ http://127.0.0.1:8000/health
 
 ### 3.3 学習GUI
 
-リポジトリのZIPをダウンロードして展開し、READMEに記載した8ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。READMEやLICENSE、docs、testsを本体へ上書きする必要はありません。
+リポジトリのZIPをダウンロードして展開し、READMEに記載した6ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。READMEやLICENSE、docs、testsを本体へ上書きする必要はありません。
 
 ```text
 Irodori-TTS/
@@ -83,7 +83,7 @@ Whisperサーバーを先に起動し、`start_speaker_training_gui.bat`をダ�
 
 ブラウザーが開かない場合は<http://127.0.0.1:7862>を開きます。
 
-起動したCLIウィンドウを開いたまま使用し、終了時はそのウィンドウで`Ctrl+C`を押します。GUIが起動した実行中のジョブと常駐テスト用プロセスも停止します。ブラウザーを閉じるだけでは終了しません。`stop_speaker_training_gui.bat`は予備の終了手段です。停止バッチを使う場合は先にGUI内で実行中のジョブを停止してください。
+起動したCLIウィンドウを開いたまま使用し、終了時はそのウィンドウで`Ctrl+C`を押します。GUIが起動した実行中のジョブと常駐テスト用プロセスも停止します。ブラウザーを閉じるだけでは終了しません。
 
 ## 5. 話者データ
 
@@ -266,7 +266,7 @@ Whisperサーバーを起動し、`MIRAI_WHISPER_URL/health`の応答を確認�
 
 ### ポート7862が使用中
 
-`stop_speaker_training_gui.bat`を実行します。不明なプロセスの場合、停止スクリプトは安全のため終了しません。
+以前のGUIのCLIウィンドウで`Ctrl+C`を押して終了し、再起動します。CLIが見つからない場合はタスクマネージャーで対象のGUIプロセスを確認して終了してください。
 
 ### manifestが古い
 
