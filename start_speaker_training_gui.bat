@@ -5,8 +5,8 @@ title Irodori Speaker Training GUI - KEEP THIS WINDOW OPEN
 set "GUI_ROOT=%~dp0"
 set "IRODORI_CANDIDATE="
 
-if defined IRODORI_TTS_ROOT call :select_irodori "%IRODORI_TTS_ROOT%"
-if not defined IRODORI_CANDIDATE call :select_irodori "%GUI_ROOT%"
+call :select_irodori "%GUI_ROOT%"
+if not defined IRODORI_CANDIDATE if defined IRODORI_TTS_ROOT call :select_irodori "%IRODORI_TTS_ROOT%"
 if not defined IRODORI_CANDIDATE call :select_irodori "%GUI_ROOT%.."
 if not defined IRODORI_CANDIDATE call :select_irodori "%GUI_ROOT%..\Irodori-TTS"
 if not defined IRODORI_CANDIDATE (
@@ -14,7 +14,8 @@ if not defined IRODORI_CANDIDATE (
 )
 if not defined IRODORI_CANDIDATE (
   echo [ERROR] The official Irodori-TTS repository could not be found.
-  echo Place both repositories in the same parent folder, or set:
+  echo Copy the Speaker Training GUI files into your configured Irodori-TTS folder.
+  echo For a separate installation, set:
   echo   IRODORI_TTS_ROOT=C:\path\to\Irodori-TTS
   pause
   exit /b 1

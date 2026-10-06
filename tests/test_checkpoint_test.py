@@ -45,6 +45,18 @@ class CheckpointTestFunctions(unittest.TestCase):
             item.stop()
         self.temp.cleanup()
 
+    def test_relocated_metadata_uses_copied_audio(self) -> None:
+        audio = self.speaker_root / "Alice" / "audio" / "clip.wav"
+        audio.write_bytes(b"audio")
+        old = self.root / "old" / "speaker-training" / "Alice" / "audio" / "clip.wav"
+        self.assertEqual(gui._metadata_audio_path(audio.parent.parent, str(old)), audio.resolve())
+
+    def test_unrelated_external_audio_is_not_relocated(self) -> None:
+        audio = self.speaker_root / "Alice" / "audio" / "clip.wav"
+        audio.write_bytes(b"audio")
+        outside = self.root / "unrelated" / "clip.wav"
+        self.assertEqual(gui._metadata_audio_path(audio.parent.parent, str(outside)), outside.resolve())
+
     def test_embedding_choices_use_paths_relative_to_speaker(self) -> None:
         self.assertEqual(
             gui._embedding_choices("Alice"),

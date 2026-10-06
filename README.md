@@ -1,46 +1,64 @@
 # Irodori-TTS Speaker Training GUI
 
-[Irodori-TTS](https://github.com/Aratako/Irodori-TTS) v4/v4.1向けのSpeaker Inversion学習GUIです。
+Irodori-TTS v4/v4.1向けのSpeaker Inversion学習GUIです。既存のIrodori-TTS環境へ必要ファイルをコピーするだけで利用できます。GUI専用のPython環境は不要です。
 
-文字起こし、音声を聴きながらの確認・修正、承認データからのmanifest生成、Speaker Embedding学習、ステップ別チェックポイントのテストまでを1つのGradio画面から操作できます。Whisper処理には[MiRai-Server-for-Whisper](https://github.com/Snail921/MiRai-Server-for-Whisper)のHTTP APIを使用し、学習とテストには公式Irodori-TTSクローンのuv環境とコードをそのまま利用します。
+## 導入と起動
 
-## Manuals / マニュアル
-
-- [日本語マニュアル](docs/MANUAL_JA.md)
-- [English Manual](docs/MANUAL_EN.md)
-
-## Features
-
-- Whisper APIによる音声の一括文字起こし
-- キャッシュ再利用と手修正済み`metadata.jsonl`の保持
-- セル選択による対応音声の自動再生
-- 表内での文字起こし修正・承認管理
-- 承認済みデータだけを使ったmanifest・latent生成
-- Speaker Inversion学習、ログ表示、停止操作
-- 保存されたステップ別Speaker Embeddingによるテスト音声生成・完了後の自動再生
-- 公式Irodori-TTSリポジトリとuv環境の自動検出
-- ドライブ文字やPython実行ファイルへの固定パスなし
-
-## Quick start
-
-1. 公式[Irodori-TTS](https://github.com/Aratako/Irodori-TTS)をクローンし、ハードウェアに合ったextraで`uv sync`を実行します。
-2. [MiRai-Server-for-Whisper](https://github.com/Snail921/MiRai-Server-for-Whisper)をセットアップし、サーバーを起動します。
-3. このリポジトリをIrodori-TTSと同じ親フォルダーへクローンします。
-4. `speaker-training\話者名\audio\`へ学習音声を配置します。
-5. `start_speaker_training_gui.bat`をダブルクリックします。
-
-推奨配置：
+1. Irodori-TTS本体をセットアップし、Whisperサーバーを起動します（既定: http://127.0.0.1:8000）。
+2. このリポジトリをZIPでダウンロード・展開し、次の7ファイルを、`train.py` があるIrodori-TTSフォルダへドラッグ＆ドロップします。
 
 ```text
-任意のフォルダー\
-├─ Irodori-TTS\
-└─ Irodori-TTS-Speaker-Training-GUI\
+speaker_training_gui.py
+speaker_training_job_runner.py
+speaker_training_transcribe_client.py
+start_speaker_training_gui.bat
+stop_speaker_training_gui.bat
+stop_speaker_training_gui.ps1
+open_when_ready.ps1
 ```
 
-GUIは既定で<http://127.0.0.1:7862>、Whisperサーバーは<http://127.0.0.1:8000>を使用します。
+3. `Irodori-TTS/speaker-training/<話者名>/audio/` に学習音声を配置します。
+4. コピーした `start_speaker_training_gui.bat` をダブルクリックします。GUIの既定URLは http://127.0.0.1:7862 です。
 
-詳しい導入方法、設定、操作手順、トラブルシューティングは[日本語マニュアル](docs/MANUAL_JA.md)または[English Manual](docs/MANUAL_EN.md)を参照してください。
+Irodori-TTS本体の `README.md`、`LICENSE`、`docs`、`tests` を置き換える必要はありません。上記7ファイルだけをコピーしてください。
+
+```text
+Irodori-TTS/
+  .venv/
+  train.py
+  infer.py
+  prepare_manifest.py
+  configs/
+  speaker_training_gui.py
+  speaker_training_job_runner.py
+  speaker_training_transcribe_client.py
+  start_speaker_training_gui.bat
+  stop_speaker_training_gui.bat
+  stop_speaker_training_gui.ps1
+  open_when_ready.ps1
+  speaker-training/<話者名>/audio/
+  speaker-embeddings/<話者名>/<日時>/
+```
+
+## 操作
+
+文字起こし → 音声付きレビュー・修正・承認 → manifest/latent生成 → 話者埋め込み学習 → チェックポイント比較。
+
+学習とテストはIrodori-TTS本体のコードとuv環境を使用します。文字起こしだけがWhisper APIを利用します。API推論サーバー経由の学習ではありません。現在のGUIはCUDAを使用します。
+
+## 既存配置からの移行
+
+旧GUIを停止し、実行中のジョブがない状態で、既存の `speaker-training` と `speaker-embeddings` をIrodori-TTS側へコピーしてください。同名フォルダがある場合は内容を確認してからコピーしてください。旧データは動作確認まで保持してください。
+
+`metadata.jsonl` などには旧音声の絶対パスが含まれるため、コピー後にGUIのレビューで「修正と承認状態を保存」を実行し、manifestを再生成してください。既存の学習済み埋め込みはそのまま利用できます。
+
+従来の別ディレクトリ配置も引き続き利用できます。起動バッチは同じフォルダの本体を優先し、見つからなければ `IRODORI_TTS_ROOT` や隣接フォルダを確認します。
+
+## マニュアル
+
+- [日本語](docs/MANUAL_JA.md)
+- [English](docs/MANUAL_EN.md)
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). Irodori-TTS, Whisper, and their model weights are governed by their respective licenses and terms.
+MIT。Irodori-TTS、Whisper、モデルのライセンスはそれぞれの配布元に従います。

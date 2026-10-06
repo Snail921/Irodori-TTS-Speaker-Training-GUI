@@ -45,23 +45,11 @@ http://127.0.0.1:8000/health
 
 ### 3.3 Training GUI
 
-Clone this repository beside the official Irodori-TTS checkout:
+Download and extract the repository ZIP. Copy the seven runtime files listed in the README into the configured Irodori-TTS folder containing `train.py`. Do not overwrite the upstream README, LICENSE, docs, or tests.
 
-```powershell
-git clone https://github.com/Snail921/Irodori-TTS-Speaker-Training-GUI.git
-```
+No separate Python environment is required. Double-click the copied `start_speaker_training_gui.bat`. Data lives under `speaker-training/<speaker>/audio/`, and embeddings under `speaker-embeddings/`, beside the launcher.
 
-```text
-Any parent folder\
-├─ Irodori-TTS\
-│  ├─ .venv\
-│  ├─ prepare_manifest.py
-│  └─ train.py
-└─ Irodori-TTS-Speaker-Training-GUI\
-   └─ start_speaker_training_gui.bat
-```
-
-The launcher searches sibling directories for a valid official checkout. Drive letters and folder names are not hard-coded.
+The launcher prefers the checkout in its own folder. The existing sibling layout remains supported. When migrating, stop all jobs first, copy both data folders, preserve the originals, save the review to update absolute audio paths, and regenerate the manifest.
 
 ## 4. Starting and stopping
 

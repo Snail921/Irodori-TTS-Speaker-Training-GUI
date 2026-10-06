@@ -45,23 +45,20 @@ http://127.0.0.1:8000/health
 
 ### 3.3 学習GUI
 
-Irodori-TTSと同じ親フォルダーへクローンします。
-
-```powershell
-git clone https://github.com/Snail921/Irodori-TTS-Speaker-Training-GUI.git
-```
+リポジトリのZIPをダウンロードして展開し、READMEに記載した7ファイルを、`train.py` があるIrodori-TTSフォルダーへコピーします。READMEやLICENSE、docs、testsを本体へ上書きする必要はありません。
 
 ```text
-任意のフォルダー\
-├─ Irodori-TTS\
-│  ├─ .venv\
-│  ├─ prepare_manifest.py
-│  └─ train.py
-└─ Irodori-TTS-Speaker-Training-GUI\
-   └─ start_speaker_training_gui.bat
+Irodori-TTS/
+  .venv/
+  train.py
+  prepare_manifest.py
+  speaker_training_gui.py
+  start_speaker_training_gui.bat
+  speaker-training/<話者名>/audio/
+  speaker-embeddings/
 ```
 
-起動バッチは、同じ親フォルダーから公式Irodori-TTSを自動検出します。ドライブ文字やフォルダー名は固定されていません。
+GUI専用の環境は作成しません。同じフォルダーの本体環境で起動します。旧来の隣接フォルダー配置も利用可能です。移行時のデータコピーとmanifest再生成についてはREADMEを参照してください。
 
 ## 4. 起動と終了
 

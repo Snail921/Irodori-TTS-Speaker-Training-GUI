@@ -145,7 +145,20 @@ def _metadata_audio_path(speaker_dir: Path, raw: str) -> Path:
     path = Path(str(raw)).expanduser()
     if not path.is_absolute():
         path = speaker_dir / path
-    return path.resolve()
+    path = path.resolve()
+    # Relocate audio paths only from the same speaker-training/<speaker>/audio tree.
+    try:
+        path.relative_to(speaker_dir.resolve())
+    except ValueError:
+        parts = path.parts
+        for index in range(len(parts) - 2):
+            if (parts[index].casefold() == "speaker-training"
+                    and parts[index + 1].casefold() == speaker_dir.name.casefold()
+                    and parts[index + 2].casefold() == "audio"):
+                relocated = speaker_dir.joinpath(*parts[index + 2:]).resolve()
+                if relocated.is_relative_to(speaker_dir.resolve()) and relocated.is_file():
+                    return relocated
+    return path
 
 
 def _review_state(speaker_dir: Path) -> dict[str, bool]:
