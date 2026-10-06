@@ -99,7 +99,10 @@ class NetworkDiagnostics:
         size = 0
         async def observed_receive():
             message = await receive()
-            if message["type"] == "http.disconnect":
+            # Gradio closes its queue event stream after delivering the result.
+            # A plain ASGI disconnect here is not evidence of a network failure;
+            # actual reset exceptions remain recorded by the exception handler.
+            if message["type"] == "http.disconnect" and path != "/gradio_api/queue/data":
                 _network_log(f"disconnect peer={peer} path={path} range={byte_range} elapsed={time.monotonic()-started:.3f}s")
             return message
         async def observed_send(message):

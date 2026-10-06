@@ -42,6 +42,17 @@ class DiagnosticsTests(unittest.TestCase):
             self.assertTrue(any('disconnect' in m and 'bytes=0-4' in m for m in messages))
             self.assertTrue(any('status=206 bytes=5' in m for m in messages))
 
+    def test_queue_stream_disconnect_is_not_logged(self):
+        async def app(scope, receive, send):
+            await receive()
+        async def receive(): return {'type':'http.disconnect'}
+        async def send(message): pass
+        with patch.object(gui,'_network_log') as log:
+            asyncio.run(gui.NetworkDiagnostics(app)(
+                {'type':'http','client':('127.0.0.1',321),'method':'GET',
+                 'path':'/gradio_api/queue/data','headers':[]},receive,send))
+            log.assert_not_called()
+
     def test_exception_is_logged_and_forwarded_without_suppression(self):
         loop=Mock(); previous=Mock()
         transport=Mock(); transport.get_extra_info.return_value=('127.0.0.1',321)
